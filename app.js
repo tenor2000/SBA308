@@ -78,15 +78,36 @@ const LearnerSubmissions = [
 // Script Start
 
 function getLearnerData(course, ag, submission) {
-  let studentId = 125;
+  let finalResult = [];
 
-  //Logic
-  // get assignments
-  let gradebook = setUpGradebook(ag);
-  let studentGrades = getStudentAssignments(studentId, submission);
-  let mergedGrades = mergeStudentGradebook(studentGrades, gradebook);
+  let studentIds = [125, 132];
 
-  return mergedGrades;
+  studentIds.forEach((studentId) => {
+    let gradebook = setUpGradebook(ag);
+    let studentGrades = getStudentAssignments(studentId, submission);
+    let mergedGrades = mergeStudentGradebook(studentGrades, gradebook);
+
+    let result = createStudentObject(studentId, mergedGrades);
+    finalResult.push(result);
+  });
+
+  return finalResult;
+
+  function createStudentObject(id, assignments) {
+    let templateObject = {};
+
+    assignments.forEach((assignment) => {
+      const earned = assignment.earned;
+      const total = assignment.total;
+
+      templateObject[assignment.assignId] = earned / total;
+    });
+
+    templateObject.id = id;
+    templateObject.avg = getWeightedAverage(assignments);
+
+    return templateObject;
+  }
 
   function mergeStudentGradebook(studentScores, blankGradeBook) {
     let storage = [];
@@ -98,10 +119,24 @@ function getLearnerData(course, ag, submission) {
           result = { ...assignment, ...assignScore };
         }
       });
+
+      if (!isAssignmentLate(result)) {
+        result.earned -= 15;
+      }
+
       storage.push(result);
     });
 
     return storage;
+  }
+
+  function isAssignmentLate(assignment) {
+    const dateDue = Date.parse(assignment.dueDate);
+    const dateSubmit = Date.parse(assignment.submittedAt);
+
+    if (dateDue >= dateSubmit) return true;
+
+    return false;
   }
 
   function setUpGradebook(ag) {
@@ -126,6 +161,7 @@ function getLearnerData(course, ag, submission) {
     submission.forEach((submit) => {
       if (submit.learner_id === studentId) {
         const assignObj = {
+          studentId: submit.learner_id,
           assignId: submit.assignment_id,
           submittedAt: submit.submission.submitted_at,
           earned: submit.submission.score,
@@ -138,7 +174,6 @@ function getLearnerData(course, ag, submission) {
   }
 
   function getWeightedAverage(gradesArray) {
-    // grades are stored in a tuple, earned/total points
     let earnedPoints = 0;
     let totalPoints = 0;
 
@@ -149,23 +184,7 @@ function getLearnerData(course, ag, submission) {
 
     return earnedPoints / totalPoints;
   }
-
-  function createStudentObject(id, grades = {}) {
-    let templateObject = {};
-
-    Object.keys(grades).forEach((key) => {
-      // grades are stored in a tuple, earned/total
-      const earned = grades[key][0];
-      const total = grades[key][1];
-
-      templateObject[key] = earned / total;
-    });
-
-    templateObject.id = id;
-    templateObject.avg = getWeightedAverage(grades);
-
-    return templateObject;
-  }
 }
 
+console.log("Final Result:");
 console.log(getLearnerData(CourseInfo, AssignmentGroup, LearnerSubmissions));

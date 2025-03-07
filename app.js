@@ -1,110 +1,33 @@
-const CourseInfo = {
-  id: 451,
-  name: "Introduction to JavaScript",
-};
-
-// The provided assignment group.
-const AssignmentGroup = {
-  id: 12345,
-  name: "Fundamentals of JavaScript",
-  course_id: 451,
-  group_weight: 25,
-  assignments: [
-    {
-      id: 1,
-      name: "Declare a Variable",
-      due_at: "2023-01-25",
-      points_possible: 50,
-    },
-    {
-      id: 2,
-      name: "Write a Function",
-      due_at: "2023-02-27",
-      points_possible: 150,
-    },
-    {
-      id: 3,
-      name: "Code the World",
-      due_at: "3156-11-15",
-      points_possible: 500,
-    },
-  ],
-};
-
-// The provided learner submission data.
-const LearnerSubmissions = [
-  {
-    learner_id: 125,
-    assignment_id: 1,
-    submission: {
-      submitted_at: "2023-01-25",
-      score: 47,
-    },
-  },
-  {
-    learner_id: 125,
-    assignment_id: 2,
-    submission: {
-      submitted_at: "2023-02-12",
-      score: 150,
-    },
-  },
-  {
-    learner_id: 125,
-    assignment_id: 3,
-    submission: {
-      submitted_at: "2023-01-25",
-      score: 400,
-    },
-  },
-  {
-    learner_id: 132,
-    assignment_id: 1,
-    submission: {
-      submitted_at: "2023-01-24",
-      score: 39,
-    },
-  },
-  {
-    learner_id: 132,
-    assignment_id: 2,
-    submission: {
-      submitted_at: "2023-03-07",
-      score: 140,
-    },
-  },
-];
-
-// Script Start
+import { CourseInfo, AssignmentGroup, LearnerSubmissions } from "./testData.js";
 
 function getLearnerData(course, ag, submission) {
   if (ag.course_id !== course.id) {
     throw new Error(
-      "Course ID do not match and Assignment Group course ID do not match."
+      "CourseInfo id and AssignmentGroup course_id do not match."
     );
   }
 
   let finalResult = [];
-  let errorLog = [];
+  let logs = [];
 
   let studentIds = getStudentIds(submission);
 
   try {
     studentIds.forEach((studentId) => {
-      let gradebook = setUpGradebook(ag);
-      let studentGrades = getStudentAssignments(studentId, submission);
-      let mergedGrades = mergeStudentGradebook(studentGrades, gradebook);
+      const gradebook = setUpGradebook(ag);
+      const studentGrades = getStudentAssignments(studentId, submission);
+      const mergedGrades = mergeStudentGradebook(studentGrades, gradebook);
 
-      let result = createStudentObject(studentId, mergedGrades);
+      const result = createStudentObject(studentId, mergedGrades);
       finalResult.push(result);
     });
   } catch {
-    errorLog.push("Please check that your data is formatted correctly");
+    logs.push("ERROR: Please check if your data is formatted correctly");
   }
 
   return {
     data: finalResult,
-    errors: errorLog,
+    logFile: logs,
   };
 
   function createStudentObject(id, assignments) {
@@ -117,7 +40,8 @@ function getLearnerData(course, ag, submission) {
       const earned = assignment.earned;
       const total = assignment.total;
 
-      templateObject[assignment.assignId] = earned / total;
+      templateObject[assignment.assignId] =
+        Math.round((earned / total) * 1000) / 1000;
     });
 
     return templateObject;
@@ -147,15 +71,15 @@ function getLearnerData(course, ag, submission) {
         });
 
         if (!isAssignmentLate(result)) {
+          logs.push(
+            `Student ${result.studentId} has turned in assignment #${result.assignId} late and will be penalized 10% off the assignment grade.`
+          );
           result.earned -= assignment.total * 0.1;
         }
-
-        if (isAssignmentDateReached(result)) {
-          storage.push(result);
-        }
+        storage.push(result);
       } catch {
-        errorLog.push(
-          `For one student, assignment ID ${assignment.assignId} not found.`
+        logs.push(
+          `ERROR: There was problem merging a record for assignment ${assignment.assignId}.`
         );
       }
     });
@@ -184,21 +108,24 @@ function getLearnerData(course, ag, submission) {
   function setUpGradebook(ag) {
     let gradebook = [];
 
-    ag.assignments.forEach((assignment) => {
+    for (const assignment of ag.assignments) {
       let studentGradeBook = {
         assignId: assignment.id,
         dueDate: assignment.due_at,
-        earned: 0,
+        earned: 0.0,
         total: assignment.points_possible,
       };
+
       if (studentGradeBook.total == 0) {
-        errorLog.push(
-          "An Assignment was assigned 0 weighted points and was not included."
+        logs.push(
+          `ERROR: Assignment ID ${studentGradeBook.assignId} was assigned 0 weighted points and was not included.`
         );
+      } else if (!isAssignmentDateReached(studentGradeBook)) {
+        continue; // my one and only loop control keyword
       } else {
         gradebook.push(studentGradeBook);
       }
-    });
+    }
 
     return gradebook;
   }
@@ -230,7 +157,7 @@ function getLearnerData(course, ag, submission) {
       totalPoints += assignment.total;
     });
 
-    return earnedPoints / totalPoints;
+    return Math.trunc((earnedPoints / totalPoints) * 1000) / 1000;
   }
 }
 
@@ -241,7 +168,11 @@ const finishedResult = getLearnerData(
 );
 
 console.log("Final Result:");
-console.log(finishedResult.data);
-finishedResult.errors.forEach((errorItem) => {
-  console.log("ERROR: " + errorItem);
+const myGrades = finishedResult.data;
+console.log(myGrades);
+finishedResult.logFile.length > 0
+  ? console.log("Log file: ")
+  : console.log("No anomalies have occurred.");
+finishedResult.logFile.forEach((item) => {
+  console.log(item);
 });

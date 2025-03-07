@@ -22,7 +22,9 @@ function getLearnerData(course, ag, submission) {
       finalResult.push(result);
     });
   } catch {
-    logs.push("ERROR: Please check if your data is formatted correctly");
+    logs.push(
+      "ERROR: Please check if your data is formatted correctly and try again!"
+    );
   }
 
   return {
@@ -31,20 +33,20 @@ function getLearnerData(course, ag, submission) {
   };
 
   function createStudentObject(id, assignments) {
-    let templateObject = {};
+    let studentObject = {};
 
-    templateObject.id = id;
-    templateObject.avg = getWeightedAverage(assignments);
+    studentObject.id = id;
+    studentObject.avg = getWeightedAverage(assignments);
 
     assignments.forEach((assignment) => {
       const earned = assignment.earned;
       const total = assignment.total;
 
-      templateObject[assignment.assignId] =
+      studentObject[assignment.assignId] =
         Math.round((earned / total) * 1000) / 1000;
     });
 
-    return templateObject;
+    return studentObject;
   }
 
   function getStudentIds(objectsArray) {
@@ -109,6 +111,7 @@ function getLearnerData(course, ag, submission) {
     let gradebook = [];
 
     for (const assignment of ag.assignments) {
+      // my second type of loop that is not forEach
       let studentGradeBook = {
         assignId: assignment.id,
         dueDate: assignment.due_at,
@@ -116,11 +119,14 @@ function getLearnerData(course, ag, submission) {
         total: assignment.points_possible,
       };
 
-      if (studentGradeBook.total == 0) {
+      if (studentGradeBook.total === 0) {
         logs.push(
-          `ERROR: Assignment ID ${studentGradeBook.assignId} was assigned 0 weighted points and was not included.`
+          `ERROR: Assignment #${studentGradeBook.assignId} was assigned 0 weighted points and was excluded.`
         );
       } else if (!isAssignmentDateReached(studentGradeBook)) {
+        logs.push(
+          `Assignment #${studentGradeBook.assignId} is still being collected and will be excluded.`
+        );
         continue; // my one and only loop control keyword
       } else {
         gradebook.push(studentGradeBook);
@@ -170,9 +176,11 @@ const finishedResult = getLearnerData(
 console.log("Final Result:");
 const myGrades = finishedResult.data;
 console.log(myGrades);
+
 finishedResult.logFile.length > 0
   ? console.log("Log file: ")
   : console.log("No anomalies have occurred.");
+
 finishedResult.logFile.forEach((item) => {
   console.log(item);
 });

@@ -21,10 +21,8 @@ function getLearnerData(course, ag, submission) {
       const result = createStudentObject(studentId, mergedGrades);
       finalResult.push(result);
     });
-  } catch {
-    logs.push(
-      "ERROR: Please check if your data is formatted correctly and try again!"
-    );
+  } catch (error) {
+    logs.push(error);
   }
 
   return {

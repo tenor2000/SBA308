@@ -78,23 +78,40 @@ const LearnerSubmissions = [
 // Script Start
 
 function getLearnerData(course, ag, submission) {
+  if (ag.course_id !== course.id) {
+    throw new Error(
+      "Course ID do not match and Assignment Group course ID do not match."
+    );
+  }
+
   let finalResult = [];
+  let errorLog = [];
 
-  let studentIds = [125, 132];
+  let studentIds = getStudentIds(submission);
 
-  studentIds.forEach((studentId) => {
-    let gradebook = setUpGradebook(ag);
-    let studentGrades = getStudentAssignments(studentId, submission);
-    let mergedGrades = mergeStudentGradebook(studentGrades, gradebook);
+  try {
+    studentIds.forEach((studentId) => {
+      let gradebook = setUpGradebook(ag);
+      let studentGrades = getStudentAssignments(studentId, submission);
+      let mergedGrades = mergeStudentGradebook(studentGrades, gradebook);
 
-    let result = createStudentObject(studentId, mergedGrades);
-    finalResult.push(result);
-  });
+      let result = createStudentObject(studentId, mergedGrades);
+      finalResult.push(result);
+    });
+  } catch {
+    errorLog.push("Please check that your data is formatted correctly");
+  }
 
-  return finalResult;
+  return {
+    data: finalResult,
+    errors: errorLog,
+  };
 
   function createStudentObject(id, assignments) {
     let templateObject = {};
+
+    templateObject.id = id;
+    templateObject.avg = getWeightedAverage(assignments);
 
     assignments.forEach((assignment) => {
       const earned = assignment.earned;
@@ -103,10 +120,18 @@ function getLearnerData(course, ag, submission) {
       templateObject[assignment.assignId] = earned / total;
     });
 
-    templateObject.id = id;
-    templateObject.avg = getWeightedAverage(assignments);
-
     return templateObject;
+  }
+
+  function getStudentIds(objectsArray) {
+    let ids = [];
+    objectsArray.forEach((obj) => {
+      if (!ids.includes(obj.learner_id)) {
+        ids.push(obj.learner_id);
+      }
+    });
+
+    return ids;
   }
 
   function mergeStudentGradebook(studentScores, blankGradeBook) {
@@ -114,17 +139,25 @@ function getLearnerData(course, ag, submission) {
 
     blankGradeBook.forEach((assignment) => {
       let result;
-      studentScores.forEach((assignScore) => {
-        if (assignScore.assignId === assignment.assignId) {
-          result = { ...assignment, ...assignScore };
+      try {
+        studentScores.forEach((assignScore) => {
+          if (assignScore.assignId === assignment.assignId) {
+            result = { ...assignment, ...assignScore };
+          }
+        });
+
+        if (!isAssignmentLate(result)) {
+          result.earned -= assignment.total * 0.1;
         }
-      });
 
-      if (!isAssignmentLate(result)) {
-        result.earned -= 15;
+        if (isAssignmentDateReached(result)) {
+          storage.push(result);
+        }
+      } catch {
+        errorLog.push(
+          `For one student, assignment ID ${assignment.assignId} not found.`
+        );
       }
-
-      storage.push(result);
     });
 
     return storage;
@@ -139,6 +172,15 @@ function getLearnerData(course, ag, submission) {
     return false;
   }
 
+  function isAssignmentDateReached(assignment) {
+    const dateDue = Date.parse(assignment.dueDate);
+    const currDate = Date.now();
+
+    if (dateDue <= currDate) return true;
+
+    return false;
+  }
+
   function setUpGradebook(ag) {
     let gradebook = [];
 
@@ -149,7 +191,13 @@ function getLearnerData(course, ag, submission) {
         earned: 0,
         total: assignment.points_possible,
       };
-      gradebook.push(studentGradeBook);
+      if (studentGradeBook.total == 0) {
+        errorLog.push(
+          "An Assignment was assigned 0 weighted points and was not included."
+        );
+      } else {
+        gradebook.push(studentGradeBook);
+      }
     });
 
     return gradebook;
@@ -186,5 +234,14 @@ function getLearnerData(course, ag, submission) {
   }
 }
 
+const finishedResult = getLearnerData(
+  CourseInfo,
+  AssignmentGroup,
+  LearnerSubmissions
+);
+
 console.log("Final Result:");
-console.log(getLearnerData(CourseInfo, AssignmentGroup, LearnerSubmissions));
+console.log(finishedResult.data);
+finishedResult.errors.forEach((errorItem) => {
+  console.log("ERROR: " + errorItem);
+});

@@ -49,11 +49,12 @@ function getLearnerData(course, ag, submission) {
 
   function getStudentIds(objectsArray) {
     let ids = [];
-    objectsArray.forEach((obj) => {
-      if (!ids.includes(obj.learner_id)) {
-        ids.push(obj.learner_id);
+    for (let i = 0; i < objectsArray.length; i++) {
+      const idNum = objectsArray[i].learner_id;
+      if (!ids.includes(idNum)) {
+        ids.push(idNum);
       }
-    });
+    }
 
     return ids;
   }
@@ -109,7 +110,6 @@ function getLearnerData(course, ag, submission) {
     let gradebook = [];
 
     for (const assignment of ag.assignments) {
-      // my second type of loop that is not forEach
       let studentGradeBook = {
         assignId: assignment.id,
         dueDate: assignment.due_at,

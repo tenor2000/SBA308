@@ -1,5 +1,28 @@
 import { CourseInfo, AssignmentGroup, LearnerSubmissions } from "./testData.js";
 
+// initialize the data object
+const finishedResult = getLearnerData(
+  CourseInfo,
+  AssignmentGroup,
+  LearnerSubmissions
+);
+
+const myGrades = finishedResult.data;
+const myLogfile = finishedResult.logFile;
+
+// show the final results
+console.log("Final Result:");
+console.log(myGrades);
+
+myLogfile.length > 0
+  ? console.log("Log file: ")
+  : console.log("No anomalies have occurred.");
+
+// show the log file if anything unusual occurred
+myLogfile.forEach((item) => {
+  console.log(item);
+});
+
 function getLearnerData(course, ag, submission) {
   if (ag.course_id !== course.id) {
     throw new Error(
@@ -164,21 +187,3 @@ function getLearnerData(course, ag, submission) {
     return Math.trunc((earnedPoints / totalPoints) * 1000) / 1000;
   }
 }
-
-const finishedResult = getLearnerData(
-  CourseInfo,
-  AssignmentGroup,
-  LearnerSubmissions
-);
-
-console.log("Final Result:");
-const myGrades = finishedResult.data;
-console.log(myGrades);
-
-finishedResult.logFile.length > 0
-  ? console.log("Log file: ")
-  : console.log("No anomalies have occurred.");
-
-finishedResult.logFile.forEach((item) => {
-  console.log(item);
-});

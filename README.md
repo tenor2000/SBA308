@@ -28,16 +28,19 @@ const finishedResult = getLearnerData(
   LearnerSubmissions
 );
 
+const myGrades = finishedResult.data;
+const myLogfile = finishedResult.logFile;
+
 // show the final results
 console.log("Final Result:");
-const myGrades = finishedResult.data;
 console.log(myGrades);
 
-// show the log file if anything unusual occurred
-finishedResult.logFile.length > 0
+myLogfile.length > 0
   ? console.log("Log file: ")
   : console.log("No anomalies have occurred.");
-finishedResult.logFile.forEach((item) => {
+
+// show the log file if anything unusual occurred
+myLogfile.forEach((item) => {
   console.log(item);
 });
 ```
